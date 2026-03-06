@@ -22,8 +22,8 @@ api.interceptors.request.use((config) => {
 export const login = (roll_number, password) =>
   api.post("/api/login", { roll_number, password });
 
-export const register = (name, roll_number, password, role) =>
-  api.post("/api/register", { name, roll_number, password, role });
+export const register = (name, roll_number, password, room_number, role) =>
+  api.post("/api/register", { name, roll_number, password, room_number, role });
 
 // ─── Student ────────────────────────────────────────────────
 export const getMyOrders = () => api.get("/api/my-orders");
@@ -49,8 +49,8 @@ export const updatePayment = (student_roll, month, amount, paid, status) =>
 export const getStudents = (month) =>
   api.get("/api/students", { params: month ? { month } : {} });
 
-export const addStudent = (name, roll_number, password) =>
-  api.post("/api/students/add", { name, roll_number, password });
+export const addStudent = (name, roll_number, password, room_number) =>
+  api.post("/api/students/add", { name, roll_number, password, room_number });
 
 // Admin can also fetch all menu items (including unavailable)
 export const getMenuAdmin = () => api.get("/api/menu");

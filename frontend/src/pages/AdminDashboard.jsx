@@ -45,7 +45,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tab Bar Container (Scrollable on mobile) */}
-        <div 
+        <div
           style={{ width: "100%", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px", WebkitOverflowScrolling: "touch" }}
         >
           <div
@@ -107,8 +107,18 @@ function PlaceOrderTab() {
 
   // Form State
   const [selectedStudent, setSelectedStudent] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [orderItems, setOrderItems] = useState({}); // { item_id: quantity }
   const [submitting, setSubmitting] = useState(false);
+
+  const filteredStudents = students.filter((s) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.roll_number.toLowerCase().includes(q) ||
+      (s.room_number && s.room_number.toLowerCase().includes(q))
+    );
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -173,21 +183,91 @@ function PlaceOrderTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* 1. Select Student */}
-      <div className="bento-card">
+      <div className="bento-card" style={{ position: "relative" }}>
         <h3 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "14px", color: "var(--color-charcoal)" }}>1. Select Student</h3>
-        <select
-          className="input-field"
-          style={{ width: "100%", maxWidth: "400px" }}
-          value={selectedStudent}
-          onChange={(e) => setSelectedStudent(e.target.value)}
-        >
-          <option value="">-- Choose a Roll Number --</option>
-          {students.map((s) => (
-            <option key={s.id} value={s.roll_number}>
-              {s.name} ({s.roll_number})
-            </option>
-          ))}
-        </select>
+
+        {/* Unified Search & Select */}
+        <div style={{ position: "relative", width: "100%", maxWidth: "400px" }}>
+          {!selectedStudent ? (
+            <input
+              className="input-field"
+              type="text"
+              placeholder="Start typing Name, Roll No, or Room..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: "100%", marginBottom: "0" }}
+            />
+          ) : (
+            <div
+              className="input-field"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--color-amber-50)",
+                borderColor: "var(--color-ochre)",
+                cursor: "pointer"
+              }}
+              onClick={() => {
+                setSelectedStudent("");
+                setSearchQuery("");
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>
+                {students.find(s => s.roll_number === selectedStudent)?.name} ({selectedStudent})
+              </span>
+              <span style={{ fontSize: "12px", color: "var(--color-slate-400)" }}>✕ Change</span>
+            </div>
+          )}
+
+          {/* Results Dropdown */}
+          {!selectedStudent && searchQuery.length > 0 && (
+            <div style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              zIndex: 100,
+              backgroundColor: "white",
+              borderRadius: "8px",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+              maxHeight: "250px",
+              overflowY: "auto",
+              marginTop: "4px",
+              border: "1px solid var(--color-sand)"
+            }}>
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((s) => (
+                  <div
+                    key={s.id}
+                    className="search-result-item"
+                    style={{
+                      padding: "10px 14px",
+                      cursor: "pointer",
+                      borderBottom: "1px solid var(--color-sand)",
+                      transition: "background 0.2s"
+                    }}
+                    onClick={() => {
+                      setSelectedStudent(s.roll_number);
+                      setSearchQuery("");
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = "var(--color-sand)"}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: "14px" }}>{s.name}</div>
+                    <div style={{ fontSize: "12px", color: "var(--color-slate-500)" }}>
+                      Roll: {s.roll_number} {s.room_number ? `· Room: ${s.room_number}` : ""}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: "14px", textAlign: "center", color: "var(--color-slate-400)", fontSize: "14px" }}>
+                  No students match your search.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 2. Select Items */}
@@ -246,8 +326,8 @@ function PlaceOrderTab() {
           <span>Total Cost:</span>
           <span>₹{totalCost}</span>
         </div>
-        <button 
-          className="btn-primary" 
+        <button
+          className="btn-primary"
           disabled={!selectedStudent || totalCost === 0 || submitting}
           onClick={handleSubmit}
           style={{ padding: "12px 32px", width: "100%", maxWidth: "300px" }}
@@ -411,6 +491,7 @@ function OrdersTab() {
     fetchOrders();
   }, []);
 
+
   if (loading) return <SkeletonLoader count={5} height="48px" />;
 
   // Group orders by date
@@ -489,12 +570,14 @@ function OrdersTab() {
                         whiteSpace: "nowrap",
                       }}
                     >
+
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
+
                 {grouped[date].map((o, idx) => (
                   <tr
                     key={o.id}
@@ -531,6 +614,7 @@ function OrdersTab() {
                         {o.quantity}
                       </span>
                     </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -538,6 +622,7 @@ function OrdersTab() {
           </div>
         </div>
       ))}
+
     </div>
   );
 }
@@ -700,6 +785,7 @@ function PaymentsTab() {
 
   useEffect(() => { fetchStudents(selectedMonth); }, [selectedMonth]);
 
+
   const globalBill = students.reduce((sum, s) => sum + s.total_bill, 0);
   const monthLabel = MONTH_OPTIONS.find((o) => o.value === selectedMonth)?.label || selectedMonth;
 
@@ -739,7 +825,9 @@ function PaymentsTab() {
                 {/* Name + Roll */}
                 <div style={{ flex: 1 }}>
                   <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--color-charcoal)" }}>{s.name}</h4>
-                  <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginTop: "2px" }}>{s.roll_number}</p>
+                  <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginTop: "2px" }}>
+                    {s.roll_number} {s.room_no || s.room_number ? `· Room: ${s.room_no || s.room_number}` : ""}
+                  </p>
                 </div>
 
                 {/* Two Bill Columns */}
@@ -775,6 +863,7 @@ function PaymentsTab() {
               </div>
             )}
           </>
+
         )}
       </div>
     </div>
@@ -793,6 +882,7 @@ function StudentsTab() {
   // New Student Form State
   const [newName, setNewName] = useState("");
   const [newRoll, setNewRoll] = useState("");
+  const [newRoom, setNewRoom] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
   const fetchStudents = async () => {
@@ -815,10 +905,11 @@ function StudentsTab() {
       return toast.error("Please fill in all fields");
     }
     try {
-      await addStudent(newName, newRoll, newPassword);
+      await addStudent(newName, newRoll, newPassword, newRoom);
       toast.success(`Student ${newName} added successfully!`);
       setNewName("");
       setNewRoll("");
+      setNewRoom("");
       setNewPassword("");
       fetchStudents();
     } catch (e) {
@@ -833,7 +924,7 @@ function StudentsTab() {
       {/* Add Student Form */}
       <div className="bento-card">
         <h3 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "14px", color: "var(--color-charcoal)" }}>Register New Student</h3>
-        <form 
+        <form
           onSubmit={handleAddStudent}
           style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}
         >
@@ -860,6 +951,17 @@ function StudentsTab() {
             />
           </div>
           <div style={{ flex: "1", minWidth: "120px" }}>
+            <label style={{ display: "block", fontSize: "12px", color: "var(--color-slate-600)", marginBottom: "4px", fontWeight: 500 }}>Room Number</label>
+            <input
+              className="input-field"
+              type="text"
+              placeholder="e.g. 101"
+              value={newRoom}
+              onChange={(e) => setNewRoom(e.target.value)}
+              style={{ width: "100%" }}
+            />
+          </div>
+          <div style={{ flex: "1", minWidth: "120px" }}>
             <label style={{ display: "block", fontSize: "12px", color: "var(--color-slate-600)", marginBottom: "4px", fontWeight: 500 }}>Password</label>
             <input
               className="input-field"
@@ -877,12 +979,26 @@ function StudentsTab() {
       </div>
 
       <div className="bento-card" style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
-        <thead>
-          <tr style={{ borderBottom: "2px solid var(--color-sand)" }}>
-            {["Name", "Roll No.", "Bill", "Paid", "Status"].map((h) => (
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid var(--color-sand)" }}>
+              {["Name", "Roll No.", "Room No.", "Total Bill"].map((h) => (
+                <th
+                  key={h}
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--color-slate-400)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
               <th
-                key={h}
                 style={{
                   textAlign: "left",
                   padding: "12px 14px",
@@ -893,42 +1009,41 @@ function StudentsTab() {
                   letterSpacing: "0.5px",
                 }}
               >
-                {h}
+                Status
               </th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((s) => (
+              <tr key={s.id} style={{ borderBottom: "1px solid var(--color-sand)" }}>
+                <td style={{ padding: "12px 14px", fontSize: "14px", fontWeight: 500 }}>{s.name}</td>
+                <td style={{ padding: "12px 14px", fontSize: "14px" }}>{s.roll_number}</td>
+                <td style={{ padding: "12px 14px", fontSize: "14px" }}>{s.room_number || "-"}</td>
+                <td style={{ padding: "12px 14px", fontSize: "14px" }}>₹{s.total_bill}</td>
+                <td style={{ padding: "12px 14px" }}>
+                  <span
+                    className="chip"
+                    style={{
+                      backgroundColor: s.payment_status === "paid" ? "var(--color-emerald-50)" : s.payment_status === "no_bill" ? "var(--color-sand)" : "var(--color-red-50)",
+                      color: s.payment_status === "paid" ? "var(--color-emerald-500)" : s.payment_status === "no_bill" ? "var(--color-slate-600)" : "var(--color-red-500)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {s.payment_status === "paid" ? "Paid" : s.payment_status === "no_bill" ? "No Bill" : "Pending"}
+                  </span>
+                </td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((s) => (
-            <tr key={s.id} style={{ borderBottom: "1px solid var(--color-sand)" }}>
-              <td style={{ padding: "12px 14px", fontSize: "14px", fontWeight: 500 }}>{s.name}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>{s.roll_number}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>₹{s.total_bill}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>₹{s.total_paid}</td>
-              <td style={{ padding: "12px 14px" }}>
-                <span
-                  className="chip"
-                  style={{
-                    backgroundColor: s.payment_status === "paid" ? "var(--color-emerald-50)" : s.payment_status === "no_bill" ? "var(--color-sand)" : "var(--color-red-50)",
-                    color: s.payment_status === "paid" ? "var(--color-emerald-500)" : s.payment_status === "no_bill" ? "var(--color-slate-600)" : "var(--color-red-500)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.payment_status === "paid" ? "Paid" : s.payment_status === "no_bill" ? "No Bill" : "Pending"}
-                </span>
-              </td>
-            </tr>
-          ))}
-          {students.length === 0 && (
-            <tr>
-              <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "var(--color-slate-400)" }}>
-                No students registered
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+            {students.length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ padding: "40px", textAlign: "center", color: "var(--color-slate-400)" }}>
+                  No students registered
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

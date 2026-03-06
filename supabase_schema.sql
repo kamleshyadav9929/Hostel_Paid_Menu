@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   roll_number TEXT UNIQUE NOT NULL,
   room_no TEXT,
   password_hash TEXT NOT NULL,
+  room_number TEXT,
   role TEXT NOT NULL CHECK (role IN ('student', 'admin')),
   created_at TIMESTAMPTZ DEFAULT now()
 );

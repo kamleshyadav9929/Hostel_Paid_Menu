@@ -201,7 +201,8 @@ router.put("/payment/update", async (req, res) => {
 // ─── POST /api/students/add ────────────────────────────────
 router.post("/students/add", async (req, res) => {
   try {
-    const { name, roll_number, password, room_no } = req.body;
+    const { name, roll_number, password, room_no, room_number } = req.body;
+    const finalRoom = room_no || room_number || null;
 
     if (!name || !roll_number || !password) {
       return res.status(400).json({ error: "name, roll_number, and password are required" });
@@ -222,7 +223,7 @@ router.post("/students/add", async (req, res) => {
 
     const { data, error } = await supabase
       .from("users")
-      .insert([{ name, roll_number, password_hash, role: "student", room_no: room_no || null }])
+      .insert([{ name, roll_number, password_hash, role: "student", room_no: finalRoom }])
       .select("id, name, roll_number, room_no, role")
       .single();
 
@@ -242,7 +243,7 @@ router.get("/students", async (req, res) => {
 
     const { data: students, error } = await supabase
       .from("users")
-      .select("id, name, roll_number, created_at")
+      .select("id, name, roll_number, room_no, created_at")
       .eq("role", "student")
       .order("name");
 
@@ -296,6 +297,8 @@ router.get("/students", async (req, res) => {
 
         return {
           ...s,
+          room_no: s.room_no || s.room_number || null,
+          room_number: s.room_no || s.room_number || null,
           month_bill: monthBill,
           all_time_bill: allTimeBill,
           total_bill: monthBill, // backwards compat
