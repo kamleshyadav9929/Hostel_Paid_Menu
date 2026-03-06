@@ -31,7 +31,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tab Bar Container (Scrollable on mobile) */}
-        <div 
+        <div
           style={{ width: "100%", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px", WebkitOverflowScrolling: "touch" }}
         >
           <div
@@ -93,8 +93,18 @@ function PlaceOrderTab() {
 
   // Form State
   const [selectedStudent, setSelectedStudent] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [orderItems, setOrderItems] = useState({}); // { item_id: quantity }
   const [submitting, setSubmitting] = useState(false);
+
+  const filteredStudents = students.filter((s) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.roll_number.toLowerCase().includes(q) ||
+      (s.room_number && s.room_number.toLowerCase().includes(q))
+    );
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -159,21 +169,91 @@ function PlaceOrderTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* 1. Select Student */}
-      <div className="bento-card">
+      <div className="bento-card" style={{ position: "relative" }}>
         <h3 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "14px", color: "var(--color-charcoal)" }}>1. Select Student</h3>
-        <select
-          className="input-field"
-          style={{ width: "100%", maxWidth: "400px" }}
-          value={selectedStudent}
-          onChange={(e) => setSelectedStudent(e.target.value)}
-        >
-          <option value="">-- Choose a Roll Number --</option>
-          {students.map((s) => (
-            <option key={s.id} value={s.roll_number}>
-              {s.name} ({s.roll_number})
-            </option>
-          ))}
-        </select>
+
+        {/* Unified Search & Select */}
+        <div style={{ position: "relative", width: "100%", maxWidth: "400px" }}>
+          {!selectedStudent ? (
+            <input
+              className="input-field"
+              type="text"
+              placeholder="Start typing Name, Roll No, or Room..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: "100%", marginBottom: "0" }}
+            />
+          ) : (
+            <div
+              className="input-field"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "var(--color-amber-50)",
+                borderColor: "var(--color-ochre)",
+                cursor: "pointer"
+              }}
+              onClick={() => {
+                setSelectedStudent("");
+                setSearchQuery("");
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>
+                {students.find(s => s.roll_number === selectedStudent)?.name} ({selectedStudent})
+              </span>
+              <span style={{ fontSize: "12px", color: "var(--color-slate-400)" }}>✕ Change</span>
+            </div>
+          )}
+
+          {/* Results Dropdown */}
+          {!selectedStudent && searchQuery.length > 0 && (
+            <div style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              zIndex: 100,
+              backgroundColor: "white",
+              borderRadius: "8px",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+              maxHeight: "250px",
+              overflowY: "auto",
+              marginTop: "4px",
+              border: "1px solid var(--color-sand)"
+            }}>
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((s) => (
+                  <div
+                    key={s.id}
+                    className="search-result-item"
+                    style={{
+                      padding: "10px 14px",
+                      cursor: "pointer",
+                      borderBottom: "1px solid var(--color-sand)",
+                      transition: "background 0.2s"
+                    }}
+                    onClick={() => {
+                      setSelectedStudent(s.roll_number);
+                      setSearchQuery("");
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = "var(--color-sand)"}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: "14px" }}>{s.name}</div>
+                    <div style={{ fontSize: "12px", color: "var(--color-slate-500)" }}>
+                      Roll: {s.roll_number} {s.room_number ? `· Room: ${s.room_number}` : ""}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: "14px", textAlign: "center", color: "var(--color-slate-400)", fontSize: "14px" }}>
+                  No students match your search.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 2. Select Items */}
@@ -232,8 +312,8 @@ function PlaceOrderTab() {
           <span>Total Cost:</span>
           <span>₹{totalCost}</span>
         </div>
-        <button 
-          className="btn-primary" 
+        <button
+          className="btn-primary"
           disabled={!selectedStudent || totalCost === 0 || submitting}
           onClick={handleSubmit}
           style={{ padding: "12px 32px", width: "100%", maxWidth: "300px" }}
@@ -397,59 +477,58 @@ function OrdersTab() {
     fetch();
   }, []);
 
+  const groupedOrders = orders.reduce((groups, order) => {
+    const date = order.date;
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(order);
+    return groups;
+  }, {});
+
+  const sortedDates = Object.keys(groupedOrders).sort((a, b) => new Date(b) - new Date(a));
+
   if (loading) return <p style={{ color: "var(--color-slate-400)" }}>Loading…</p>;
 
   return (
-    <div className="bento-card" style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
-        <thead>
-          <tr style={{ borderBottom: "2px solid var(--color-sand)" }}>
-            {["Roll No.", "Item", "Qty", "Date"].map((h) => (
-              <th
-                key={h}
-                style={{
-                  textAlign: "left",
-                  padding: "12px 14px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "var(--color-slate-400)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((o) => (
-            <tr key={o.id} style={{ borderBottom: "1px solid var(--color-sand)" }}>
-              <td style={{ padding: "12px 14px", fontSize: "14px", fontWeight: 500 }}>{o.student_roll}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>{o.menu_items?.item_name}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>{o.quantity}</td>
-              <td style={{ padding: "12px 14px" }}>
-                <span
-                  className="chip"
-                  style={{ backgroundColor: "var(--color-amber-50)", color: "var(--color-ochre)" }}
-                >
-                  {o.date}
-                </span>
-              </td>
-            </tr>
-          ))}
-          {orders.length === 0 && (
-            <tr>
-              <td colSpan={4} style={{ padding: "40px", textAlign: "center", color: "var(--color-slate-400)" }}>
-                No orders yet
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      {sortedDates.map((date) => (
+        <div key={date} className="bento-card" style={{ padding: "20px" }}>
+          <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--color-charcoal)", marginBottom: "16px", display: "flex", justifyContent: "space-between" }}>
+            <span>{new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+            <span style={{ fontSize: "12px", color: "var(--color-slate-400)", fontWeight: 400 }}>{groupedOrders[date].length} Orders</span>
+          </h3>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--color-sand)" }}>
+                  {["Roll No.", "Item", "Qty"].map((h) => (
+                    <th key={h} style={{ textAlign: "left", padding: "8px 12px", fontSize: "11px", color: "var(--color-slate-400)", textTransform: "uppercase" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {groupedOrders[date].map((o) => (
+                  <tr key={o.id} style={{ borderBottom: "1px solid var(--color-sand)" }}>
+                    <td style={{ padding: "10px 12px", fontSize: "14px", fontWeight: 500 }}>{o.student_roll}</td>
+                    <td style={{ padding: "10px 12px", fontSize: "14px" }}>{o.menu_items?.item_name}</td>
+                    <td style={{ padding: "10px 12px", fontSize: "14px" }}>{o.quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+      {orders.length === 0 && (
+        <div className="bento-card" style={{ textAlign: "center", padding: "40px", color: "var(--color-slate-400)" }}>
+          No orders yet
+        </div>
+      )}
     </div>
   );
 }
+
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  PAYMENTS TAB                                              */
@@ -471,34 +550,15 @@ function PaymentsTab() {
 
   useEffect(() => { fetchStudents(); }, []);
 
-  const handleMarkPaid = async (student) => {
-    const month = new Date().toLocaleString("default", { month: "long", year: "numeric" });
-    try {
-      await updatePayment(
-        student.roll_number,
-        month,
-        student.total_bill,
-        student.total_bill,
-        "paid"
-      );
-      toast.success(`Marked ${student.roll_number} as paid for ${month}`);
-      fetchStudents();
-    } catch (e) {
-      toast.error("Payment update failed");
-    }
-  };
-
   if (loading) return <p style={{ color: "var(--color-slate-400)" }}>Loading…</p>;
 
-  // Global aggregates
+  // Global aggregate
   const globalBill = students.reduce((sum, s) => sum + s.total_bill, 0);
-  const globalPaid = students.reduce((sum, s) => sum + s.total_paid, 0);
-  const globalRemaining = globalBill - globalPaid;
 
   return (
     <div>
       {/* Global Summary */}
-      <div 
+      <div
         className="stagger"
         style={{
           display: "grid",
@@ -508,20 +568,12 @@ function PaymentsTab() {
         }}
       >
         <div className="bento-card animate-fade-in-up" style={{ padding: "16px 20px" }}>
-          <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Mess Bill</p>
+          <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Outstanding Mess Bill</p>
           <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-charcoal)" }}>₹{globalBill}</p>
-        </div>
-        <div className="bento-card animate-fade-in-up" style={{ padding: "16px 20px" }}>
-          <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Collected</p>
-          <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-emerald-500)" }}>₹{globalPaid}</p>
-        </div>
-        <div className="bento-card animate-fade-in-up" style={{ padding: "16px 20px" }}>
-          <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Outstanding Due</p>
-          <p style={{ fontSize: "24px", fontWeight: 700, color: globalRemaining > 0 ? "var(--color-red-500)" : "var(--color-emerald-500)" }}>₹{globalRemaining}</p>
         </div>
       </div>
 
-      {/* Student List */}
+      {/* Student List (Balance View) */}
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {students.map((s) => (
           <div
@@ -529,66 +581,21 @@ function PaymentsTab() {
             className="bento-card"
             style={{
               display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
-            <div style={{
-              display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              flexWrap: "wrap",
-              gap: "12px",
-            }}>
-              <div>
-                <h4 style={{ fontSize: "15px", fontWeight: 600 }}>{s.name}</h4>
-                <p style={{ fontSize: "13px", color: "var(--color-slate-600)" }}>
-                  {s.roll_number} · Bill: ₹{s.total_bill} · Paid: ₹{s.total_paid}
-                </p>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span
-                  className="chip"
-                  style={{
-                    backgroundColor: s.payment_status === "paid" ? "var(--color-emerald-50)" : "var(--color-red-50)",
-                    color: s.payment_status === "paid" ? "var(--color-emerald-500)" : "var(--color-red-500)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.payment_status === "paid" ? "Paid" : s.payment_status === "no_bill" ? "No Bill" : "Pending"}
-                </span>
-                {s.payment_status !== "paid" && s.total_bill > 0 && (
-                  <button
-                    className="btn-primary"
-                    style={{ padding: "8px 16px", fontSize: "12px" }}
-                    onClick={() => handleMarkPaid(s)}
-                  >
-                    Mark Paid
-                  </button>
-                )}
-              </div>
+              padding: "16px 20px"
+            }}
+          >
+            <div>
+              <h4 style={{ fontSize: "15px", fontWeight: 600 }}>{s.name}</h4>
+              <p style={{ fontSize: "13px", color: "var(--color-slate-600)" }}>
+                {s.roll_number} {s.room_number ? `· Room: ${s.room_number}` : ""}
+              </p>
             </div>
-
-            {/* Individual Payments History */}
-            {s.payments && s.payments.length > 0 && (
-              <div style={{ 
-                marginTop: "4px", 
-                padding: "8px 12px", 
-                backgroundColor: "var(--color-cream)", 
-                borderRadius: "8px", 
-                border: "1px dashed var(--color-sand)" 
-              }}>
-                <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-slate-400)", textTransform: "uppercase", marginBottom: "6px" }}>Payment Records</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  {s.payments.map((p, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-                      <span style={{ color: "var(--color-charcoal)" }}>₹{p.paid}</span>
-                      <span style={{ color: "var(--color-slate-400)" }}>{p.amount > p.paid ? "Partial Payment" : "Full Payment"}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div style={{ textAlign: "right" }}>
+              <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "2px" }}>Total Balance</p>
+              <p style={{ fontSize: "18px", fontWeight: 700, color: "var(--color-charcoal)" }}>₹{s.total_bill}</p>
+            </div>
           </div>
         ))}
         {students.length === 0 && (
@@ -601,6 +608,7 @@ function PaymentsTab() {
   );
 }
 
+
 /* ═══════════════════════════════════════════════════════════ */
 /*  STUDENTS TAB                                              */
 /* ═══════════════════════════════════════════════════════════ */
@@ -611,6 +619,7 @@ function StudentsTab() {
   // New Student Form State
   const [newName, setNewName] = useState("");
   const [newRoll, setNewRoll] = useState("");
+  const [newRoom, setNewRoom] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
   const fetchStudents = async () => {
@@ -633,10 +642,11 @@ function StudentsTab() {
       return toast.error("Please fill in all fields");
     }
     try {
-      await addStudent(newName, newRoll, newPassword);
+      await addStudent(newName, newRoll, newPassword, newRoom);
       toast.success(`Student ${newName} added successfully!`);
       setNewName("");
       setNewRoll("");
+      setNewRoom("");
       setNewPassword("");
       fetchStudents();
     } catch (e) {
@@ -651,7 +661,7 @@ function StudentsTab() {
       {/* Add Student Form */}
       <div className="bento-card">
         <h3 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "14px", color: "var(--color-charcoal)" }}>Register New Student</h3>
-        <form 
+        <form
           onSubmit={handleAddStudent}
           style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}
         >
@@ -678,6 +688,17 @@ function StudentsTab() {
             />
           </div>
           <div style={{ flex: "1", minWidth: "120px" }}>
+            <label style={{ display: "block", fontSize: "12px", color: "var(--color-slate-600)", marginBottom: "4px", fontWeight: 500 }}>Room Number</label>
+            <input
+              className="input-field"
+              type="text"
+              placeholder="e.g. 101"
+              value={newRoom}
+              onChange={(e) => setNewRoom(e.target.value)}
+              style={{ width: "100%" }}
+            />
+          </div>
+          <div style={{ flex: "1", minWidth: "120px" }}>
             <label style={{ display: "block", fontSize: "12px", color: "var(--color-slate-600)", marginBottom: "4px", fontWeight: 500 }}>Password</label>
             <input
               className="input-field"
@@ -695,12 +716,26 @@ function StudentsTab() {
       </div>
 
       <div className="bento-card" style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
-        <thead>
-          <tr style={{ borderBottom: "2px solid var(--color-sand)" }}>
-            {["Name", "Roll No.", "Bill", "Paid", "Status"].map((h) => (
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid var(--color-sand)" }}>
+              {["Name", "Roll No.", "Room No.", "Total Bill"].map((h) => (
+                <th
+                  key={h}
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--color-slate-400)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
               <th
-                key={h}
                 style={{
                   textAlign: "left",
                   padding: "12px 14px",
@@ -711,42 +746,41 @@ function StudentsTab() {
                   letterSpacing: "0.5px",
                 }}
               >
-                {h}
+                Status
               </th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((s) => (
+              <tr key={s.id} style={{ borderBottom: "1px solid var(--color-sand)" }}>
+                <td style={{ padding: "12px 14px", fontSize: "14px", fontWeight: 500 }}>{s.name}</td>
+                <td style={{ padding: "12px 14px", fontSize: "14px" }}>{s.roll_number}</td>
+                <td style={{ padding: "12px 14px", fontSize: "14px" }}>{s.room_number || "-"}</td>
+                <td style={{ padding: "12px 14px", fontSize: "14px" }}>₹{s.total_bill}</td>
+                <td style={{ padding: "12px 14px" }}>
+                  <span
+                    className="chip"
+                    style={{
+                      backgroundColor: s.payment_status === "paid" ? "var(--color-emerald-50)" : s.payment_status === "no_bill" ? "var(--color-sand)" : "var(--color-red-50)",
+                      color: s.payment_status === "paid" ? "var(--color-emerald-500)" : s.payment_status === "no_bill" ? "var(--color-slate-600)" : "var(--color-red-500)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {s.payment_status === "paid" ? "Paid" : s.payment_status === "no_bill" ? "No Bill" : "Pending"}
+                  </span>
+                </td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((s) => (
-            <tr key={s.id} style={{ borderBottom: "1px solid var(--color-sand)" }}>
-              <td style={{ padding: "12px 14px", fontSize: "14px", fontWeight: 500 }}>{s.name}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>{s.roll_number}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>₹{s.total_bill}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>₹{s.total_paid}</td>
-              <td style={{ padding: "12px 14px" }}>
-                <span
-                  className="chip"
-                  style={{
-                    backgroundColor: s.payment_status === "paid" ? "var(--color-emerald-50)" : s.payment_status === "no_bill" ? "var(--color-sand)" : "var(--color-red-50)",
-                    color: s.payment_status === "paid" ? "var(--color-emerald-500)" : s.payment_status === "no_bill" ? "var(--color-slate-600)" : "var(--color-red-500)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.payment_status === "paid" ? "Paid" : s.payment_status === "no_bill" ? "No Bill" : "Pending"}
-                </span>
-              </td>
-            </tr>
-          ))}
-          {students.length === 0 && (
-            <tr>
-              <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "var(--color-slate-400)" }}>
-                No students registered
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+            {students.length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ padding: "40px", textAlign: "center", color: "var(--color-slate-400)" }}>
+                  No students registered
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

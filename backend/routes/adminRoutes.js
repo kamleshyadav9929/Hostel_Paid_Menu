@@ -184,7 +184,7 @@ router.put("/payment/update", async (req, res) => {
 // ─── POST /api/students/add ────────────────────────────────
 router.post("/students/add", async (req, res) => {
   try {
-    const { name, roll_number, password } = req.body;
+    const { name, roll_number, password, room_number } = req.body;
 
     if (!name || !roll_number || !password) {
       return res.status(400).json({ error: "name, roll_number, and password are required" });
@@ -205,8 +205,8 @@ router.post("/students/add", async (req, res) => {
 
     const { data, error } = await supabase
       .from("users")
-      .insert([{ name, roll_number, password_hash, role: "student" }])
-      .select("id, name, roll_number, role")
+      .insert([{ name, roll_number, password_hash, room_number, role: "student" }])
+      .select("id, name, roll_number, room_number, role")
       .single();
 
     if (error) throw error;
@@ -223,7 +223,7 @@ router.get("/students", async (req, res) => {
   try {
     const { data: students, error } = await supabase
       .from("users")
-      .select("id, name, roll_number, created_at")
+      .select("id, name, roll_number, room_number, created_at")
       .eq("role", "student")
       .order("name");
 

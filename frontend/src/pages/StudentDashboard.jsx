@@ -26,7 +26,10 @@ export default function StudentDashboard() {
   }, []);
 
   const today = new Date().toISOString().split("T")[0];
+  const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
   const todayOrders = orders.filter((o) => o.date === today);
+  const monthOrders = orders.filter((o) => o.date.startsWith(currentMonth));
+
 
   if (loading) {
     return (
@@ -70,29 +73,9 @@ export default function StudentDashboard() {
               ₹{bill?.total_bill || 0}
             </p>
           </div>
-
-          {/* Paid */}
-          <div className="bento-card animate-fade-in-up">
-            <p style={{ fontSize: "13px", color: "var(--color-slate-400)", marginBottom: "6px", fontWeight: 500 }}>Paid</p>
-            <p style={{ fontSize: "28px", fontWeight: 700, color: "var(--color-emerald-500)" }}>
-              ₹{bill?.total_paid || 0}
-            </p>
-          </div>
-
-          {/* Remaining */}
-          <div className="bento-card animate-fade-in-up">
-            <p style={{ fontSize: "13px", color: "var(--color-slate-400)", marginBottom: "6px", fontWeight: 500 }}>Remaining</p>
-            <p
-              style={{
-                fontSize: "28px",
-                fontWeight: 700,
-                color: (bill?.remaining || 0) > 0 ? "var(--color-red-500)" : "var(--color-emerald-500)",
-              }}
-            >
-              ₹{bill?.remaining || 0}
-            </p>
-          </div>
         </div>
+
+
 
         {/* Today's Orders */}
         <section className="animate-fade-in-up">
@@ -129,11 +112,11 @@ export default function StudentDashboard() {
           )}
         </section>
 
-        {/* All Orders */}
-        {orders.length > 0 && (
+        {/* Order History (Current Month Only, Grouped by Date) */}
+        {monthOrders.length > 0 && (
           <section className="animate-fade-in-up" style={{ marginTop: "36px" }}>
             <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "14px", display: "flex", alignItems: "center" }}>
-              Order History
+              Order History (This Month)
               <span
                 className="chip"
                 style={{
@@ -143,23 +126,43 @@ export default function StudentDashboard() {
                   fontSize: "12px",
                 }}
               >
-                {orders.length}
+                {monthOrders.length}
               </span>
             </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {orders.map((o) => (
-                <OrderCard
-                  key={o.id}
-                  itemName={o.menu_items?.item_name}
-                  quantity={o.quantity}
-                  date={o.date}
-                  price={o.menu_items?.price}
-                />
-              ))}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              {Object.entries(
+                monthOrders.reduce((groups, order) => {
+                  const date = order.date;
+                  if (!groups[date]) groups[date] = [];
+                  groups[date].push(order);
+                  return groups;
+                }, {})
+              )
+                .sort(([a], [b]) => new Date(b) - new Date(a)) // Sort dates descending
+                .map(([date, group]) => (
+                  <div key={date}>
+                    <h3 style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-slate-500)", marginBottom: "10px", paddingLeft: "4px" }}>
+                      {date === today ? "Today" : new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {group.map((o) => (
+                        <OrderCard
+                          key={o.id}
+                          itemName={o.menu_items?.item_name}
+                          quantity={o.quantity}
+                          date={o.date}
+                          price={o.menu_items?.price}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
             </div>
           </section>
         )}
       </main>
+
     </>
   );
 }

@@ -8,7 +8,7 @@ const router = Router();
 // ─── POST /api/register ────────────────────────────────────
 router.post("/register", async (req, res) => {
   try {
-    const { name, roll_number, password, role } = req.body;
+    const { name, roll_number, password, room_number, role } = req.body;
 
     if (!name || !roll_number || !password) {
       return res.status(400).json({ error: "name, roll_number, and password are required" });
@@ -30,13 +30,13 @@ router.post("/register", async (req, res) => {
 
     const { data, error } = await supabase
       .from("users")
-      .insert([{ name, roll_number, password_hash, role: userRole }])
+      .insert([{ name, roll_number, password_hash, room_number, role: userRole }])
       .select()
       .single();
 
     if (error) throw error;
 
-    res.status(201).json({ message: "User registered", user: { id: data.id, name: data.name, roll_number: data.roll_number, role: data.role } });
+    res.status(201).json({ message: "User registered", user: { id: data.id, name: data.name, roll_number: data.roll_number, room_number: data.room_number, role: data.role } });
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ error: "Registration failed" });
