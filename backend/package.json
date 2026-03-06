@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Backend for Hostel Paid Menu Management App",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js"
