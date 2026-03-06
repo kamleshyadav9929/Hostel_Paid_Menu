@@ -1,0 +1,18 @@
+{
+  "name": "hostel-mess-backend",
+  "version": "1.0.0",
+  "description": "Backend for Hostel Paid Menu Management App",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.98.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "2.8.6",
+    "dotenv": "17.3.1",
+    "express": "5.2.1",
+    "jsonwebtoken": "9.0.3"
+  }
+}
