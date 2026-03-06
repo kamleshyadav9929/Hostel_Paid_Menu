@@ -24,6 +24,11 @@ app.use("/api", authRoutes);       // /api/login, /api/register
 app.use("/api", studentRoutes);    // /api/menu, /api/order, /api/my-orders, /api/my-bill
 app.use("/api", adminRoutes);      // /api/menu/add, /api/menu/update, /api/orders, /api/payment/update, /api/students
 
+// ─── Root ───────────────────────────────────────────────────
+app.get("/", (req, res) => {
+  res.send("Hostel Mess API is running. Access endpoints via /api");
+});
+
 // ─── Health check ───────────────────────────────────────────
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

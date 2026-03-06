@@ -36,7 +36,7 @@ export default function AdminDashboard() {
       <Navbar />
       <Toaster position="top-center" />
 
-      <main style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 20px" }}>
+      <main className="main-content" style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 20px" }}>
         <div className="animate-fade-in-up" style={{ marginBottom: "24px" }}>
           <h1 style={{ fontSize: "26px", fontWeight: 700 }}>Admin Dashboard</h1>
           <p style={{ color: "var(--color-slate-600)", fontSize: "15px", marginTop: "4px" }}>
@@ -44,8 +44,9 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Tab Bar Container (Scrollable on mobile) */}
+        {/* Desktop Tab Bar */}
         <div
+          className="desktop-nav"
           style={{ width: "100%", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px", WebkitOverflowScrolling: "touch" }}
         >
           <div
@@ -82,6 +83,62 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Mobile Bottom Tab Bar */}
+        <div className="mobile-nav animate-fade-in-up">
+          {TABS.map((tab) => {
+            let icon;
+            if (tab === "Place Order") icon = "🛒";
+            if (tab === "Menu") icon = "🍔";
+            if (tab === "Orders") icon = "📋";
+            if (tab === "Payments") icon = "💳";
+            if (tab === "Students") icon = "🎓";
+
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px",
+                  border: "none",
+                  background: "transparent",
+                  padding: "6px",
+                  minWidth: "60px",
+                  cursor: "pointer",
+                  color: activeTab === tab ? "var(--color-ochre)" : "var(--color-slate-400)",
+                  transition: "all 0.2s ease",
+                  transform: activeTab === tab ? "scale(1.05)" : "scale(1)",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <div 
+                  style={{ 
+                    fontSize: "20px", 
+                    opacity: activeTab === tab ? 1 : 0.5,
+                    filter: activeTab === tab ? "none" : "grayscale(100%)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {icon}
+                </div>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: activeTab === tab ? 700 : 600,
+                    fontFamily: "var(--font-outfit)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {tab === "Place Order" ? "Order" : tab}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab Content */}

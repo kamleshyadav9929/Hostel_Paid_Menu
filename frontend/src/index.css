@@ -207,3 +207,40 @@
     color: var(--color-slate-400);
   }
 }
+
+/* ── Responsive Mobile Navigation ──────────────────────────────── */
+.desktop-nav {
+  display: block;
+}
+
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none !important;
+  }
+
+  .mobile-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--color-sand);
+    padding: 10px 16px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    box-shadow: 0 -8px 30px rgba(45, 42, 38, 0.06);
+  }
+
+  .main-content {
+    padding-bottom: 90px !important;
+  }
+}
