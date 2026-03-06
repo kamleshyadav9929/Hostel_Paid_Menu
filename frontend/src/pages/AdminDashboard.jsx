@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Navbar from "../components/Navbar";
 import {
   getMenu,
@@ -13,6 +13,20 @@ import {
 import toast, { Toaster } from "react-hot-toast";
 
 const TABS = ["Place Order", "Menu", "Orders", "Payments", "Students"];
+
+function SkeletonLoader({ count = 3, height = "64px" }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div 
+          key={i} 
+          className="skeleton" 
+          style={{ height, width: "100%", borderRadius: "12px" }} 
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("Place Order");
@@ -149,7 +163,7 @@ function PlaceOrderTab() {
     }
   };
 
-  if (loading) return <p style={{ color: "var(--color-slate-400)" }}>Loading Data…</p>;
+  if (loading) return <SkeletonLoader count={3} height="120px" />;
 
   const totalCost = Object.entries(orderItems).reduce((sum, [id, qty]) => {
     const item = menu.find((m) => m.id === id);
@@ -301,7 +315,7 @@ function MenuTab() {
     }
   };
 
-  if (loading) return <p style={{ color: "var(--color-slate-400)" }}>Loading…</p>;
+  if (loading) return <SkeletonLoader count={4} height="64px" />;
 
   return (
     <div>
@@ -384,7 +398,7 @@ function OrdersTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchOrders = async () => {
       try {
         const { data } = await getAllOrders();
         setOrders(data);
@@ -394,212 +408,380 @@ function OrdersTab() {
         setLoading(false);
       }
     };
-    fetch();
+    fetchOrders();
   }, []);
 
-  if (loading) return <p style={{ color: "var(--color-slate-400)" }}>Loading…</p>;
+  if (loading) return <SkeletonLoader count={5} height="48px" />;
+
+  // Group orders by date
+  const grouped = {};
+  (orders || []).forEach((o) => {
+    const key = o.date || "Unknown Date";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(o);
+  });
+
+  // Sort dates descending
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr === "Unknown Date") return "Unknown Date";
+    const d = new Date(dateStr + "T00:00:00");
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today — " + d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday — " + d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  };
+
+  const COLS = ["Name", "Roll No", "Room No", "Item", "Qty"];
+
+  if (sortedDates.length === 0) {
+    return (
+      <div className="bento-card" style={{ textAlign: "center", padding: "40px", color: "var(--color-slate-400)" }}>
+        No orders yet
+      </div>
+    );
+  }
 
   return (
-    <div className="bento-card" style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
-        <thead>
-          <tr style={{ borderBottom: "2px solid var(--color-sand)" }}>
-            {["Roll No.", "Item", "Qty", "Date"].map((h) => (
-              <th
-                key={h}
-                style={{
-                  textAlign: "left",
-                  padding: "12px 14px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "var(--color-slate-400)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((o) => (
-            <tr key={o.id} style={{ borderBottom: "1px solid var(--color-sand)" }}>
-              <td style={{ padding: "12px 14px", fontSize: "14px", fontWeight: 500 }}>{o.student_roll}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>{o.menu_items?.item_name}</td>
-              <td style={{ padding: "12px 14px", fontSize: "14px" }}>{o.quantity}</td>
-              <td style={{ padding: "12px 14px" }}>
-                <span
-                  className="chip"
-                  style={{ backgroundColor: "var(--color-amber-50)", color: "var(--color-ochre)" }}
-                >
-                  {o.date}
-                </span>
-              </td>
-            </tr>
-          ))}
-          {orders.length === 0 && (
-            <tr>
-              <td colSpan={4} style={{ padding: "40px", textAlign: "center", color: "var(--color-slate-400)" }}>
-                No orders yet
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {sortedDates.map((date) => (
+        <div key={date}>
+          {/* Date Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "5px 14px",
+              borderRadius: "99px",
+              backgroundColor: "var(--color-charcoal)",
+              color: "var(--color-white)",
+              fontSize: "12px",
+              fontWeight: 700,
+              letterSpacing: "0.3px",
+            }}>
+              📆 {formatDate(date)}
+            </div>
+            <span style={{ fontSize: "12px", color: "var(--color-slate-400)", fontWeight: 500 }}>
+              {grouped[date].length} order{grouped[date].length !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {/* Table for this date */}
+          <div className="bento-card" style={{ overflowX: "auto", padding: 0 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--font-outfit)" }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid var(--color-sand)" }}>
+                  {COLS.map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: "left",
+                        padding: "11px 16px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: "var(--color-slate-400)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {grouped[date].map((o, idx) => (
+                  <tr
+                    key={o.id}
+                    style={{
+                      borderBottom: idx < grouped[date].length - 1 ? "1px solid var(--color-sand)" : "none",
+                      backgroundColor: idx % 2 === 1 ? "rgba(0,0,0,0.012)" : "transparent",
+                    }}
+                  >
+                    <td style={{ padding: "11px 16px", fontSize: "14px", fontWeight: 600, color: "var(--color-charcoal)", whiteSpace: "nowrap" }}>
+                      {o.student_name || o.student_roll}
+                    </td>
+                    <td style={{ padding: "11px 16px", fontSize: "13px", color: "var(--color-slate-600)", whiteSpace: "nowrap" }}>
+                      {o.student_roll}
+                    </td>
+                    <td style={{ padding: "11px 16px", fontSize: "13px", color: "var(--color-slate-600)", whiteSpace: "nowrap" }}>
+                      {o.room_no || <span style={{ color: "var(--color-slate-300)" }}>—</span>}
+                    </td>
+                    <td style={{ padding: "11px 16px", fontSize: "14px", color: "var(--color-charcoal)", whiteSpace: "nowrap" }}>
+                      {o.menu_items?.item_name}
+                    </td>
+                    <td style={{ padding: "11px 16px" }}>
+                      <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "8px",
+                        backgroundColor: "var(--color-sand)",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        color: "var(--color-charcoal)",
+                      }}>
+                        {o.quantity}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
+
 /* ═══════════════════════════════════════════════════════════ */
 /*  PAYMENTS TAB                                              */
 /* ═══════════════════════════════════════════════════════════ */
+
+// Build last 12 months as { value: "YYYY-MM", label: "Month YYYY" }
+function buildMonthOptions() {
+  const opts = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("default", { month: "long", year: "numeric" });
+    opts.push({ value, label });
+  }
+  return opts;
+}
+
+const MONTH_OPTIONS = buildMonthOptions();
+
+function MonthDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = MONTH_OPTIONS.find((o) => o.value === value) || MONTH_OPTIONS[0];
+
+  return (
+    <div ref={ref} style={{ position: "relative", userSelect: "none" }}>
+      {/* Trigger Button */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "10px 16px",
+          borderRadius: "12px",
+          border: "1.5px solid var(--color-sand)",
+          backgroundColor: "var(--color-white)",
+          cursor: "pointer",
+          fontFamily: "var(--font-outfit)",
+          fontSize: "14px",
+          fontWeight: 600,
+          color: "var(--color-charcoal)",
+          boxShadow: open ? "0 4px 20px rgba(0,0,0,0.08)" : "0 1px 4px rgba(0,0,0,0.04)",
+          transition: "box-shadow 0.2s, border-color 0.2s",
+          borderColor: open ? "var(--color-charcoal)" : "var(--color-sand)",
+          minWidth: "200px",
+          justifyContent: "space-between",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "16px" }}>📅</span>
+          {selected.label}
+        </span>
+        <span style={{
+          display: "inline-block",
+          transition: "transform 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+          transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          fontSize: "12px",
+          color: "var(--color-slate-400)",
+        }}>▾</span>
+      </button>
+
+      {/* Dropdown Panel */}
+      <div style={{
+        position: "absolute",
+        top: "calc(100% + 8px)",
+        right: 0,
+        width: "220px",
+        backgroundColor: "var(--color-white)",
+        borderRadius: "14px",
+        border: "1.5px solid var(--color-sand)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+        overflow: "visible",
+        zIndex: 100,
+        // Animation
+        opacity: open ? 1 : 0,
+        transform: open ? "translateY(0) scale(1)" : "translateY(-8px) scale(0.97)",
+        pointerEvents: open ? "auto" : "none",
+        transition: "opacity 0.2s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1)",
+      }}>
+        <div style={{
+          padding: "6px",
+          maxHeight: "168px",
+          overflowY: "auto",
+          scrollbarWidth: "thin",
+          scrollbarColor: "var(--color-sand) transparent",
+          borderRadius: "12px",
+        }}>
+          {MONTH_OPTIONS.map((opt, idx) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "9px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-outfit)",
+                  fontSize: "13px",
+                  fontWeight: isSelected ? 700 : 400,
+                  backgroundColor: isSelected ? "var(--color-charcoal)" : "transparent",
+                  color: isSelected ? "var(--color-white)" : idx === 0 ? "var(--color-charcoal)" : "var(--color-slate-600)",
+                  transition: "background-color 0.15s, color 0.15s",
+                  textAlign: "left",
+                }}
+                onMouseEnter={(e) => { if (!isSelected) { e.currentTarget.style.backgroundColor = "var(--color-sand)"; e.currentTarget.style.color = "var(--color-charcoal)"; }}}
+                onMouseLeave={(e) => { if (!isSelected) { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = idx === 0 ? "var(--color-charcoal)" : "var(--color-slate-600)"; }}}
+              >
+                <span>{opt.label}</span>
+                {idx === 0 && <span style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "99px", backgroundColor: isSelected ? "rgba(255,255,255,0.2)" : "var(--color-sand)", color: isSelected ? "white" : "var(--color-slate-500)", fontWeight: 600 }}>Current</span>}
+                {isSelected && idx !== 0 && <span style={{ fontSize: "14px" }}>✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PaymentsTab() {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fade, setFade] = useState(true);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (month) => {
+    setFade(false); // trigger fade-out
+    setLoading(true);
     try {
-      const { data } = await getStudents();
+      const { data } = await getStudents(month);
       setStudents(data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setTimeout(() => setFade(true), 50); // trigger fade-in after data loads
     }
   };
 
-  useEffect(() => { fetchStudents(); }, []);
+  useEffect(() => { fetchStudents(selectedMonth); }, [selectedMonth]);
 
-  const handleMarkPaid = async (student) => {
-    const month = new Date().toLocaleString("default", { month: "long", year: "numeric" });
-    try {
-      await updatePayment(
-        student.roll_number,
-        month,
-        student.total_bill,
-        student.total_bill,
-        "paid"
-      );
-      toast.success(`Marked ${student.roll_number} as paid for ${month}`);
-      fetchStudents();
-    } catch (e) {
-      toast.error("Payment update failed");
-    }
-  };
-
-  if (loading) return <p style={{ color: "var(--color-slate-400)" }}>Loading…</p>;
-
-  // Global aggregates
   const globalBill = students.reduce((sum, s) => sum + s.total_bill, 0);
-  const globalPaid = students.reduce((sum, s) => sum + s.total_paid, 0);
-  const globalRemaining = globalBill - globalPaid;
+  const monthLabel = MONTH_OPTIONS.find((o) => o.value === selectedMonth)?.label || selectedMonth;
 
   return (
     <div>
-      {/* Global Summary */}
-      <div 
-        className="stagger"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
-        <div className="bento-card animate-fade-in-up" style={{ padding: "16px 20px" }}>
-          <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Mess Bill</p>
-          <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-charcoal)" }}>₹{globalBill}</p>
+      {/* Header + Dropdown */}
+      <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--color-charcoal)" }}>Monthly Bill</h2>
+          <p style={{ fontSize: "13px", color: "var(--color-slate-400)", marginTop: "2px" }}>
+            Showing bill for <strong>{monthLabel}</strong>
+          </p>
         </div>
-        <div className="bento-card animate-fade-in-up" style={{ padding: "16px 20px" }}>
-          <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Collected</p>
-          <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-emerald-500)" }}>₹{globalPaid}</p>
-        </div>
-        <div className="bento-card animate-fade-in-up" style={{ padding: "16px 20px" }}>
-          <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginBottom: "4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Outstanding Due</p>
-          <p style={{ fontSize: "24px", fontWeight: 700, color: globalRemaining > 0 ? "var(--color-red-500)" : "var(--color-emerald-500)" }}>₹{globalRemaining}</p>
-        </div>
+        <MonthDropdown value={selectedMonth} onChange={setSelectedMonth} />
       </div>
 
-      {/* Student List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        {students.map((s) => (
-          <div
-            key={s.id}
-            className="bento-card"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "12px",
-            }}>
-              <div>
-                <h4 style={{ fontSize: "15px", fontWeight: 600 }}>{s.name}</h4>
-                <p style={{ fontSize: "13px", color: "var(--color-slate-600)" }}>
-                  {s.roll_number} · Bill: ₹{s.total_bill} · Paid: ₹{s.total_paid}
-                </p>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span
-                  className="chip"
-                  style={{
-                    backgroundColor: s.payment_status === "paid" ? "var(--color-emerald-50)" : "var(--color-red-50)",
-                    color: s.payment_status === "paid" ? "var(--color-emerald-500)" : "var(--color-red-500)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.payment_status === "paid" ? "Paid" : s.payment_status === "no_bill" ? "No Bill" : "Pending"}
-                </span>
-                {s.payment_status !== "paid" && s.total_bill > 0 && (
-                  <button
-                    className="btn-primary"
-                    style={{ padding: "8px 16px", fontSize: "12px" }}
-                    onClick={() => handleMarkPaid(s)}
-                  >
-                    Mark Paid
-                  </button>
-                )}
-              </div>
-            </div>
+      {/* Total Summary Card */}
+      <div className="bento-card animate-fade-in-up" style={{ padding: "16px 20px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <p style={{ fontSize: "14px", color: "var(--color-slate-500)", fontWeight: 500 }}>Total mess bill — {monthLabel}</p>
+        <p style={{ fontSize: "22px", fontWeight: 700, color: "var(--color-charcoal)" }}>
+          {loading ? "…" : `₹${globalBill}`}
+        </p>
+      </div>
 
-            {/* Individual Payments History */}
-            {s.payments && s.payments.length > 0 && (
-              <div style={{ 
-                marginTop: "4px", 
-                padding: "8px 12px", 
-                backgroundColor: "var(--color-cream)", 
-                borderRadius: "8px", 
-                border: "1px dashed var(--color-sand)" 
-              }}>
-                <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-slate-400)", textTransform: "uppercase", marginBottom: "6px" }}>Payment Records</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  {s.payments.map((p, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-                      <span style={{ color: "var(--color-charcoal)" }}>₹{p.paid}</span>
-                      <span style={{ color: "var(--color-slate-400)" }}>{p.amount > p.paid ? "Partial Payment" : "Full Payment"}</span>
-                    </div>
-                  ))}
+      {/* Student Bill List with fade animation */}
+      <div style={{ opacity: fade ? 1 : 0, transition: "opacity 0.3s ease", display: "flex", flexDirection: "column", gap: "8px" }}>
+        {loading ? (
+          <div style={{ padding: "10px 0" }}><SkeletonLoader count={4} height="72px" /></div>
+        ) : (
+          <>
+            {students.map((s) => (
+              <div
+                key={s.id}
+                className="bento-card"
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", gap: "12px" }}
+              >
+                {/* Name + Roll */}
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--color-charcoal)" }}>{s.name}</h4>
+                  <p style={{ fontSize: "12px", color: "var(--color-slate-400)", marginTop: "2px" }}>{s.roll_number}</p>
+                </div>
+
+                {/* Two Bill Columns */}
+                <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+                  {/* Month Bill */}
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontSize: "10px", color: "var(--color-slate-400)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: "2px" }}>
+                      {monthLabel}
+                    </p>
+                    <p style={{ fontSize: "16px", fontWeight: 700, color: s.month_bill > 0 ? "var(--color-ochre)" : "var(--color-slate-300)" }}>
+                      {s.month_bill > 0 ? `₹${s.month_bill}` : "—"}
+                    </p>
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ width: "1px", height: "32px", backgroundColor: "var(--color-sand)" }} />
+
+                  {/* All-Time Bill */}
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontSize: "10px", color: "var(--color-slate-400)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: "2px" }}>
+                      All Time
+                    </p>
+                    <p style={{ fontSize: "16px", fontWeight: 700, color: s.all_time_bill > 0 ? "var(--color-charcoal)" : "var(--color-slate-300)" }}>
+                      {s.all_time_bill > 0 ? `₹${s.all_time_bill}` : "—"}
+                    </p>
+                  </div>
                 </div>
               </div>
+            ))}
+            {students.length === 0 && (
+              <div className="bento-card" style={{ textAlign: "center", padding: "40px", color: "var(--color-slate-400)" }}>
+                No students registered
+              </div>
             )}
-          </div>
-        ))}
-        {students.length === 0 && (
-          <div className="bento-card" style={{ textAlign: "center", padding: "40px", color: "var(--color-slate-400)" }}>
-            No students registered
-          </div>
+          </>
         )}
       </div>
     </div>
   );
 }
+
+
 
 /* ═══════════════════════════════════════════════════════════ */
 /*  STUDENTS TAB                                              */
@@ -644,7 +826,7 @@ function StudentsTab() {
     }
   };
 
-  if (loading && students.length === 0) return <p style={{ color: "var(--color-slate-400)" }}>Loading…</p>;
+  if (loading && students.length === 0) return <SkeletonLoader count={4} height="56px" />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

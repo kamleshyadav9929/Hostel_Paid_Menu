@@ -8,10 +8,14 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   roll_number TEXT UNIQUE NOT NULL,
+  room_no TEXT,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('student', 'admin')),
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Migration: add room_no to existing installs
+ALTER TABLE users ADD COLUMN IF NOT EXISTS room_no TEXT;
 
 -- 2. MENU ITEMS TABLE
 CREATE TABLE IF NOT EXISTS menu_items (

@@ -115,13 +115,30 @@ router.put("/menu/update", async (req, res) => {
 // ─── GET /api/orders ───────────────────────────────────────
 router.get("/orders", async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data: orders, error } = await supabase
       .from("orders")
       .select("id, student_roll, quantity, date, created_at, menu_items(item_name, price)")
+      .order("date", { ascending: false })
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    res.json(data);
+
+    // Enrich with student name and room_no
+    const { data: users } = await supabase
+      .from("users")
+      .select("roll_number, name, room_no")
+      .eq("role", "student");
+
+    const userMap = {};
+    (users || []).forEach((u) => { userMap[u.roll_number] = u; });
+
+    const enriched = (orders || []).map((o) => ({
+      ...o,
+      student_name: userMap[o.student_roll]?.name || o.student_roll,
+      room_no: userMap[o.student_roll]?.room_no || null,
+    }));
+
+    res.json(enriched);
   } catch (err) {
     console.error("Orders fetch error:", err);
     res.status(500).json({ error: "Could not fetch orders" });
@@ -184,7 +201,7 @@ router.put("/payment/update", async (req, res) => {
 // ─── POST /api/students/add ────────────────────────────────
 router.post("/students/add", async (req, res) => {
   try {
-    const { name, roll_number, password } = req.body;
+    const { name, roll_number, password, room_no } = req.body;
 
     if (!name || !roll_number || !password) {
       return res.status(400).json({ error: "name, roll_number, and password are required" });
@@ -205,8 +222,8 @@ router.post("/students/add", async (req, res) => {
 
     const { data, error } = await supabase
       .from("users")
-      .insert([{ name, roll_number, password_hash, role: "student" }])
-      .select("id, name, roll_number, role")
+      .insert([{ name, roll_number, password_hash, role: "student", room_no: room_no || null }])
+      .select("id, name, roll_number, room_no, role")
       .single();
 
     if (error) throw error;
@@ -221,6 +238,8 @@ router.post("/students/add", async (req, res) => {
 // ─── GET /api/students ─────────────────────────────────────
 router.get("/students", async (req, res) => {
   try {
+    const { month } = req.query; // optional: "YYYY-MM"
+
     const { data: students, error } = await supabase
       .from("users")
       .select("id, name, roll_number, created_at")
@@ -229,18 +248,43 @@ router.get("/students", async (req, res) => {
 
     if (error) throw error;
 
+    // Build date range for the requested month, if provided
+    let dateFrom = null;
+    let dateTo = null;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [year, mon] = month.split("-").map(Number);
+      dateFrom = `${year}-${String(mon).padStart(2, "0")}-01`;
+      const lastDay = new Date(year, mon, 0).getDate(); // last day of month
+      dateTo = `${year}-${String(mon).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    }
+
     // Attach payment and bill summary for each student
     const enriched = await Promise.all(
       students.map(async (s) => {
-        // 1. Get true total bill by summing up all orders
-        const { data: orders } = await supabase
+        // 1a. Get all-time total bill (no date filter)
+        const { data: allOrders } = await supabase
           .from("orders")
           .select("quantity, menu_items(price)")
           .eq("student_roll", s.roll_number);
 
-        const totalBill = (orders || []).reduce((sum, o) => {
+        const allTimeBill = (allOrders || []).reduce((sum, o) => {
           return sum + (o.quantity * ((o.menu_items && o.menu_items.price) ? o.menu_items.price : 0));
         }, 0);
+
+        // 1b. Get month bill (filtered by month if provided)
+        let monthBill = allTimeBill; // default: same as all-time if no month filter
+        if (dateFrom && dateTo) {
+          const { data: monthOrders } = await supabase
+            .from("orders")
+            .select("quantity, menu_items(price)")
+            .eq("student_roll", s.roll_number)
+            .gte("date", dateFrom)
+            .lte("date", dateTo);
+
+          monthBill = (monthOrders || []).reduce((sum, o) => {
+            return sum + (o.quantity * ((o.menu_items && o.menu_items.price) ? o.menu_items.price : 0));
+          }, 0);
+        }
 
         // 2. Get total paid amount from payments table
         const { data: payments } = await supabase
@@ -252,10 +296,12 @@ router.get("/students", async (req, res) => {
 
         return {
           ...s,
-          total_bill: totalBill,
+          month_bill: monthBill,
+          all_time_bill: allTimeBill,
+          total_bill: monthBill, // backwards compat
           total_paid: totalPaid,
-          remaining: totalBill - totalPaid,
-          payment_status: totalBill === 0 ? "no_bill" : totalPaid >= totalBill ? "paid" : "pending",
+          remaining: allTimeBill - totalPaid,
+          payment_status: allTimeBill === 0 ? "no_bill" : totalPaid >= allTimeBill ? "paid" : "pending",
           payments: payments || [],
         };
       })

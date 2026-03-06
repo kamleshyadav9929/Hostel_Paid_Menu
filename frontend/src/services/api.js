@@ -46,7 +46,8 @@ export const getAllOrders = () => api.get("/api/orders");
 export const updatePayment = (student_roll, month, amount, paid, status) =>
   api.put("/api/payment/update", { student_roll, month, amount, paid, status });
 
-export const getStudents = () => api.get("/api/students");
+export const getStudents = (month) =>
+  api.get("/api/students", { params: month ? { month } : {} });
 
 export const addStudent = (name, roll_number, password) =>
   api.post("/api/students/add", { name, roll_number, password });
