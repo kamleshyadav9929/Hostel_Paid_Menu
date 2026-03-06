@@ -1,0 +1,38 @@
+[
+  {
+    "id": "dcdb25c1-4dbd-4d4d-a923-9219b75676e4",
+    "name": "Admin User",
+    "roll_number": "admin1",
+    "password_hash": "$2a$10$RWlj2pL4OdJny.2cVqobWeYixvb2hPdgg6bbRUiq9otwf/X02AxdG",
+    "role": "admin",
+    "created_at": "2026-03-06T13:14:16.730167+00:00",
+    "room_number": null
+  },
+  {
+    "id": "272bb95a-84d9-40de-815f-575ec3f16031",
+    "name": "Test Student",
+    "roll_number": "2023123",
+    "password_hash": "$2a$10$xJBhtKzTcwMQqCRC2KMwvOPZ8n3QJ4qi5IclmLr96UGLTxauFH9k6",
+    "role": "student",
+    "created_at": "2026-03-06T13:14:16.730167+00:00",
+    "room_number": null
+  },
+  {
+    "id": "6cde60f7-d73f-49c2-baca-68b0760f388b",
+    "name": "Kamlesh Yadav",
+    "roll_number": "15032",
+    "password_hash": "$2a$10$pFBDdMdXxk4slEqUnFQbzu6IlExOJ5WmFnb.DH0/F0/9HZog69bpO",
+    "role": "student",
+    "created_at": "2026-03-06T14:11:34.406768+00:00",
+    "room_number": null
+  },
+  {
+    "id": "d64ecac0-e389-4943-a9d3-4d88145aeec7",
+    "name": "Priyansh Lonare",
+    "roll_number": "15172",
+    "password_hash": "$2a$10$rhykBUJRNRXe9C/7qMDLC.Oa8gjPK.iHEcUvn1AhOBHNm5mBg4Re.",
+    "role": "student",
+    "created_at": "2026-03-06T16:46:03.97862+00:00",
+    "room_number": null
+  }
+]

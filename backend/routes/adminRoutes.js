@@ -126,7 +126,7 @@ router.get("/orders", async (req, res) => {
     // Enrich with student name and room_no
     const { data: users } = await supabase
       .from("users")
-      .select("roll_number, name, room_no")
+      .select("roll_number, name, room_number")
       .eq("role", "student");
 
     const userMap = {};
@@ -243,7 +243,7 @@ router.get("/students", async (req, res) => {
 
     const { data: students, error } = await supabase
       .from("users")
-      .select("id, name, roll_number, room_no, created_at")
+      .select("id, name, roll_number, room_number, created_at")
       .eq("role", "student")
       .order("name");
 
